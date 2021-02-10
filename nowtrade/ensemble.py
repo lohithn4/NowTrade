@@ -1,7 +1,7 @@
 """
 Module that enables the use of ensembles in NowTrade.
 """
-import cPickle
+import pickle
 from itertools import chain
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor #, RandomForestClassifier
@@ -26,14 +26,14 @@ def load(ensemble):
     """
     Load a previously pickled ensemble.
     """
-    return cPickle.loads(ensemble)
+    return pickle.loads(ensemble)
 
 def load_from_file(filename):
     """
     Load an ensemble from a previous one saved to file.
     """
     file_handler = open(filename, 'rb')
-    ensemble = cPickle.load(file_handler)
+    ensemble = pickle.load(file_handler)
     file_handler.close()
     return ensemble
 
@@ -70,7 +70,7 @@ class Ensemble(object):
 
         WARNING: Can be very big in size.
         """
-        return cPickle.dumps(self)
+        return pickle.dumps(self)
 
     def save_to_file(self, filename):
         """
@@ -79,7 +79,7 @@ class Ensemble(object):
         WARNING: Can be very big in size.
         """
         file_handler = open(filename, 'wb')
-        cPickle.dump(self, file_handler)
+        pickle.dump(self, file_handler)
         file_handler.close()
 
     def build_ensemble(self, dataset, **kwargs):
@@ -154,7 +154,7 @@ class Ensemble(object):
                                           min_samples_split=self.min_samples_split,
                                           n_jobs=self.number_of_jobs)
         else: raise UnknownEnsembleType()
-        self.ensemble.fit(self.training_set, self.target_set)
+        self.ensemble.fit(self.training_set, np.asarray(self.target_set))
         if compute_importances:
             self.feature_importances = self.ensemble.feature_importances_
 
@@ -185,7 +185,7 @@ class Ensemble(object):
         for i in range(self.look_back_window, len(dataframe)):
             values = dataframe[i-self.look_back_window:i+1]
             values = list(chain.from_iterable(values.values))
-            res.append(self._activate(values))
+            res.append(self._activate(np.array(values).reshape(1,-1)))
         if self.normalize:
             return np.exp(res)
         else:

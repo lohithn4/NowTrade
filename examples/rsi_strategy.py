@@ -38,4 +38,4 @@ exit_crit_group4 = criteria_group.CriteriaGroup([exit_crit_short2], ShortExit(),
 tp = trading_profile.TradingProfile(20000, trading_amount.StaticAmount(10000), trading_fee.StaticFee(5))
 strat = strategy.Strategy(d, [enter_crit_group1, enter_crit_group2, exit_crit_group1, exit_crit_group2, exit_crit_group3, exit_crit_group4], tp)
 strat.simulate()
-print strat.report.pretty_overview()
+print(strat.report.pretty_overview())

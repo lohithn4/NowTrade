@@ -47,4 +47,4 @@ profile = TradingProfile(100000, StaticAmount(10000), StaticFee(10))
 strategy = Strategy(stock_data, [enter_crit_group, exit_crit_group], profile)
 # Run the backtest
 strategy.simulate()
-print strategy.report.pretty_overview()
+print(strategy.report.pretty_overview())

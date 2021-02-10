@@ -1,7 +1,7 @@
 """
 Module that enables the use of neural networks with NowTrade.
 """
-import cPickle
+import pickle
 import numpy as np
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.datasets.supervised import SupervisedDataSet
@@ -27,7 +27,7 @@ def load(network, dataset=None):
     """
     Load a previously pickled neural network.
     """
-    network = cPickle.loads(network)
+    network = pickle.loads(network)
     if dataset:
         network.build_network(dataset, new=False)
     return network
@@ -37,7 +37,7 @@ def load_from_file(filename, dataset=None):
     Load a neural network from a previous one saved to file.
     """
     file_handler = open(filename, 'rb')
-    network = cPickle.load(file_handler)
+    network = pickle.load(file_handler)
     file_handler.close()
     if dataset:
         network.build_network(dataset, new=False)
@@ -96,7 +96,7 @@ class NeuralNetwork(object):
         """
         Returns the pickled trained/tested neural network as a string.
         """
-        return cPickle.dumps(self)
+        return pickle.dumps(self)
 
     def save_to_file(self, filename):
         """
@@ -106,7 +106,7 @@ class NeuralNetwork(object):
         http://pybrain.org/docs/api/datasets/superviseddataset.html
         """
         file_handler = open(filename, 'wb')
-        cPickle.dump(self, file_handler)
+        pickle.dump(self, file_handler)
         file_handler.close()
 
     def build_network(self, dataset, new=True, **kwargs):
@@ -156,6 +156,7 @@ class NeuralNetwork(object):
         results = np.log(dataset.data_frame[self.prediction_data].shift(-self.prediction_window))
         training_values['PREDICTION_%s' %self.prediction_data[0]] = results
         training_values = training_values.dropna()
+        print(training_values[:5])
         for _, row_data in enumerate(training_values.iterrows()):
             _, data = row_data
             sample = list(data[:-1])

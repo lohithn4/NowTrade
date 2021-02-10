@@ -6,7 +6,7 @@ from nowtrade import symbol_list, data_connection, dataset, technical_indicator,
 dc = data_connection.YahooConnection()
 sl = symbol_list.SymbolList(['GOOGL'])
 symbol = sl.get('GOOGL')
-print symbol
+print(symbol)
 d = dataset.Dataset(sl, dc, datetime.datetime(2010, 01, 01), datetime.datetime(2015, 01, 01))
 d.load_data()
 ultosc = technical_indicator.ULTOSC(symbol, 14, 28, 56)
@@ -28,4 +28,4 @@ exit_crit_group2 = criteria_group.CriteriaGroup([exit_crit_short1], action.Short
 tp = trading_profile.TradingProfile(11000, trading_amount.StaticAmount(10000), trading_fee.StaticFee(0))
 strat = strategy.Strategy(d, [enter_crit_group1, enter_crit_group2, exit_crit_group1, exit_crit_group2], tp)
 strat.simulate()
-print strat.report.pretty_overview()
+print(strat.report.pretty_overview())

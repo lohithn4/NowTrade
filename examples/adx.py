@@ -26,4 +26,4 @@ exit_crit_group = criteria_group.CriteriaGroup([exit_crit_long], LongExit(), sym
 tp = trading_profile.TradingProfile(100000, trading_amount.StaticAmount(20000), trading_fee.StaticFee(10))
 strat = strategy.Strategy(d, [enter_crit_group, exit_crit_group], tp)
 strat.simulate()
-print strat.report.pretty_overview()
+print(strat.report.pretty_overview())

@@ -84,7 +84,7 @@ class KellyCriterion(TradingAmount):
     @todo: Incomplete... finish and test this implementation
     """
     def __init__(self, win_probability, average_gains, average_losses):
-        print 'WARNING: The KellyCriterion object is incomplete'
+        print('WARNING: The KellyCriterion object is incomplete')
         TradingAmount.__init__(self)
         self.win_probability = win_probability
         self.average_gains = average_gains

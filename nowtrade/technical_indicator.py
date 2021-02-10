@@ -59,8 +59,8 @@ class Pair(TechnicalIndicator):
         data_frame[self.hedge_ratio] = hedge_ratio
         data_frame[self.spread] = spread
         data_frame[self.zscore] = (spread - \
-                                   pd.rolling_mean(spread, self.lookback)) / \
-                                   pd.rolling_std(spread, self.lookback)
+                                   pd.Series(spread, self.lookback)).rolling.mean() / \
+                                   pd.Series(spread, self.lookback).rolling.std()
 
 class Addition(TechnicalIndicator):
     """
@@ -77,10 +77,10 @@ class Addition(TechnicalIndicator):
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        if isinstance(self.data2, basestring): # Other TI
-            data_frame[self.value] = data_frame[self.data1] + data_frame[self.data2]
+        if isinstance(self.data2, str): # Other TI
+            data_frame[self.value] = data_frame[self.data1].values + data_frame[self.data2].values
         else:
-            data_frame[self.value] = data_frame[self.data1] + self.data2
+            data_frame[self.value] = data_frame[self.data1].values + self.data2
 
 class Subtraction(TechnicalIndicator):
     """
@@ -97,10 +97,10 @@ class Subtraction(TechnicalIndicator):
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        if isinstance(self.data2, basestring): # Other TI
-            data_frame[self.value] = data_frame[self.data1] - data_frame[self.data2]
+        if isinstance(self.data2, str): # Other TI
+            data_frame[self.value] = data_frame[self.data1].values - data_frame[self.data2]
         else:
-            data_frame[self.value] = data_frame[self.data1] - self.data2
+            data_frame[self.value] = data_frame[self.data1].values - self.data2
 
 class Multiplication(TechnicalIndicator):
     """
@@ -117,7 +117,7 @@ class Multiplication(TechnicalIndicator):
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        if isinstance(self.data2, basestring): # Other TI
+        if isinstance(self.data2, str): # Other TI
             data_frame[self.value] = data_frame[self.data1] * data_frame[self.data2]
         else:
             data_frame[self.value] = data_frame[self.data1] * self.data2
@@ -137,7 +137,7 @@ class Division(TechnicalIndicator):
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        if isinstance(self.data2, basestring): # Other TI
+        if isinstance(self.data2, str): # Other TI
             data_frame[self.value] = data_frame[self.data1] / data_frame[self.data2]
         else:
             data_frame[self.value] = data_frame[self.data1] / self.data2
@@ -158,7 +158,7 @@ class PercentChange(TechnicalIndicator):
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        if isinstance(self.data2, basestring): # Other TI
+        if isinstance(self.data2, str): # Other TI
             series1 = data_frame[self.data1]
             series2 = data_frame[self.data2]
             data_frame[self.value] = (series2 - series1) / series1
@@ -174,7 +174,7 @@ class Max(TechnicalIndicator):
         TechnicalIndicator.__init__(self)
         self.data = data
         self.period = period
-        self.value = 'MAX_%s_%s' %(data, period)
+        self.value = 'MAX_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'Max(data=%s, period=%s)' %(self.data, self.period)
@@ -182,7 +182,7 @@ class Max(TechnicalIndicator):
         return self.value
     def results(self, data_frame):
         try:
-            data_frame[self.value] = pd.rolling_max(data_frame[self.data], self.period)
+            data_frame[self.value] = pd.Series(data_frame[self.data], self.period).rolling.max()
         except KeyError:
             data_frame[self.value] = np.nan
 
@@ -195,7 +195,7 @@ class Min(TechnicalIndicator):
         TechnicalIndicator.__init__(self)
         self.data = data
         self.period = period
-        self.value = 'MIN_%s_%s' %(data, period)
+        self.value = 'MIN_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'Min(data=%s, period=%s)' %(self.data, self.period)
@@ -203,7 +203,7 @@ class Min(TechnicalIndicator):
         return self.value
     def results(self, data_frame):
         try:
-            data_frame[self.value] = pd.rolling_min(data_frame[self.data], self.period)
+            data_frame[self.value] = pd.Series(data_frame[self.data], self.period).rolling.min()
         except KeyError:
             data_frame[self.value] = np.nan
 
@@ -225,7 +225,7 @@ class Shift(TechnicalIndicator):
             raise InvalidShift('Must be positive shift period')
         self.data = data
         self.period = period
-        self.value = 'SHIFT_%s_%s' %(data, period)
+        self.value = 'SHIFT_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'Shift(data=%s, period=%s)' %(self.data, self.period)
@@ -243,14 +243,17 @@ class SMA(TechnicalIndicator):
         TechnicalIndicator.__init__(self)
         self.data = data
         self.period = period
-        self.value = 'SMA_%s_%s' %(data, period)
+        self.value = 'SMA_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'SMA(data=%s, period=%s)' %(self.data, self.period)
     def __repr__(self):
         return self.value
     def results(self, data_frame):
-        data_frame[self.value] = pd.rolling_mean(data_frame[self.data], self.period)
+        try:
+            data_frame[self.value] = talib.SMA(data_frame[self.data].values, self.period)
+        except KeyError:
+            data_frame[self.value] = np.nan
 
 class EMA(TechnicalIndicator):
     """
@@ -260,7 +263,7 @@ class EMA(TechnicalIndicator):
         TechnicalIndicator.__init__(self)
         self.data = data
         self.period = period
-        self.value = 'EMA_%s_%s' %(data, period)
+        self.value = 'EMA_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'EMA(data=%s, period=%s)' %(self.data, self.period)
@@ -281,7 +284,7 @@ class RSI(TechnicalIndicator):
         TechnicalIndicator.__init__(self)
         self.data = data
         self.period = period
-        self.value = 'RSI_%s_%s' %(data, period)
+        self.value = 'RSI_{0}_{1}'.format(data, period)
         self.logger.info('Initialized - %s' %self)
     def __str__(self):
         return 'RSI(data=%s, period=%s)' %(self.data, self.period)

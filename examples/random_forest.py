@@ -58,4 +58,4 @@ tp = trading_profile.TradingProfile(100000, trading_amount.StaticAmount(10000), 
 # Strategy
 strat = strategy.Strategy(test_dataset, [enter_crit_group1, enter_crit_group2, exit_crit_group1, exit_crit_group2], tp)
 strat.simulate()
-print strat.report.pretty_overview()
+print(strat.report.pretty_overview())

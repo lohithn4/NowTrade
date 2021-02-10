@@ -4,7 +4,7 @@ functionality.  It focuses on easily plotting charts of your strategy's
 performance and technical indicators.
 """
 import matplotlib.pyplot as plt
-from matplotlib.finance import candlestick_ochl
+from mplfinance.original_flavor import candlestick_ohlc
 from matplotlib.dates import date2num
 import pandas as pd
 from nowtrade import logger

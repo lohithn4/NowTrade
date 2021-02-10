@@ -404,7 +404,7 @@ class Above(Criteria):
         if isinstance(param2, TechnicalIndicator):
             param2 = param2.value
         self.param1 = param1 # Technical indicator label
-        self.param2 = param2 # Technical indicator label or int or long or float
+        self.param2 = param2 # Technical indicator label or int or  or float
         self.lookback = lookback
         self.label = 'Above_%s_%s_%s' %(param1, param2, lookback)
         self.num_bars_required = lookback
@@ -421,7 +421,7 @@ class Above(Criteria):
         if len(data_frame) < self.lookback:
             return False
         # Second value is not a technical indicator, simply a number to compare
-        if isinstance(self.param2, (int, long, float)):
+        if isinstance(self.param2, (int, float)):
             return data_frame[self.param1][-self.lookback] > self.param2
         else:
             return data_frame[self.param1][-self.lookback] > data_frame[self.param2][-self.lookback]
@@ -438,7 +438,7 @@ class Below(Criteria):
         if isinstance(param2, TechnicalIndicator):
             param2 = param2.value
         self.param1 = param1 # Technical indicator label
-        self.param2 = param2 # Technical indicator label or int or long or float
+        self.param2 = param2 # Technical indicator label or int or  or float
         self.lookback = lookback
         self.label = 'Below_%s_%s_%s' %(param1, param2, lookback)
         self.num_bars_required = lookback
@@ -455,7 +455,7 @@ class Below(Criteria):
         if len(data_frame) < self.lookback:
             return False
         # Second value is not a technical indicator, simply a number to compare
-        if isinstance(self.param2, (int, long, float)):
+        if isinstance(self.param2, (int, float)):
             return data_frame[self.param1][-self.lookback] < self.param2
         else:
             return data_frame[self.param1][-self.lookback] < data_frame[self.param2][-self.lookback]
@@ -472,7 +472,7 @@ class Equals(Criteria):
         if isinstance(param2, TechnicalIndicator):
             param2 = param2.value
         self.param1 = param1 # Technical indicator label
-        self.param2 = param2 # Technical indicator label or int or long or float
+        self.param2 = param2 # Technical indicator label or int or  or float
         self.lookback = lookback
         self.label = 'Equals_%s_%s_%s' %(param1, param2, lookback)
         self.num_bars_required = lookback
@@ -490,7 +490,7 @@ class Equals(Criteria):
         if len(data_frame) < self.lookback:
             return False
         # Second value is not a technical indicator, simply a number to compare
-        if isinstance(self.param2, (int, long, float)):
+        if isinstance(self.param2, (int, float)):
             return data_frame[self.param1][-self.lookback] == self.param2
         else:
             return data_frame[self.param1][-self.lookback] == \
@@ -524,14 +524,14 @@ class InRange(Criteria):
         @return Series(bool) The criteria status
         """
         # Two number values to check
-        if isinstance(self.min_range, (int, long, float)) and \
-           isinstance(self.max_range, (int, long, float)):
+        if isinstance(self.min_range, (int, float)) and \
+           isinstance(self.max_range, (int, float)):
             results = ((data_frame[self.technical_indicator] >= self.min_range) & \
                        (data_frame[self.technical_indicator] <= self.max_range))
-        elif isinstance(self.min_range, (int, long, float)):
+        elif isinstance(self.min_range, (int, float)):
             results = ((data_frame[self.technical_indicator] >= self.min_range) & \
                        (data_frame[self.technical_indicator] <= data_frame[self.max_range]))
-        elif isinstance(self.max_range, (int, long, float)):
+        elif isinstance(self.max_range, (int, float)):
             results = ((data_frame[self.technical_indicator] >= data_frame[self.min_range]) & \
                        (data_frame[self.technical_indicator] <= self.max_range))
         else:
@@ -593,7 +593,7 @@ class CrossingAbove(Criteria):
             return False
         value1_now = data_frame[self.param1][-1]
         value1_previous = data_frame[self.param1][-2]
-        if isinstance(self.param2, (int, long, float)):
+        if isinstance(self.param2, (int, float)):
             if value1_previous <= self.param2 and value1_now > self.param2:
                 return True
         else:
@@ -634,7 +634,7 @@ class CrossingBelow(Criteria):
             return False
         value1_now = data_frame[self.param1][-1]
         value1_previous = data_frame[self.param1][-2]
-        if isinstance(self.param2, (int, long, float)):
+        if isinstance(self.param2, (int, float)):
             if value1_previous >= self.param2 and value1_now < self.param2:
                 return True
         else:

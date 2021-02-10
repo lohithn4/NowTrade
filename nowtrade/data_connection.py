@@ -2,14 +2,17 @@
 A nowtrade module to enables pulling stock/currency data from external sources.
 Also makes it easy to store this data locally for future strategy testing.
 """
-import urllib2
+import urllib.request
+import urllib.error
+
 import zipfile
 import datetime
-from StringIO import StringIO
+from io import StringIO
 import pandas_datareader.data as web
 import pandas as pd
 from pandas import read_csv
 from nowtrade import logger
+
 
 class NoDataException(Exception):
     """
@@ -17,21 +20,26 @@ class NoDataException(Exception):
     """
     pass
 
+
 class DataConnection(object):
     """
     Base class for all data connections.
     """
+
     def __init__(self):
         self.logger = logger.Logger(self.__class__.__name__)
         self.logger.info('Initialized')
+
     def __str__(self):
         return self.__class__.__name__
+
 
 class YahooConnection(DataConnection):
     """
     Utilizes Pandas' Remote Data Access methods to fetch
     symbol data from Yahoo.
     """
+
     def get_data(self, symbol, start, end):
         """
         @type symbol: string
@@ -41,26 +49,30 @@ class YahooConnection(DataConnection):
         @rtype: pandas.DataFrame
         """
         ret = web.DataReader(str(symbol).upper(), 'yahoo', start, end)
-        ret.rename(columns=lambda name: '%s_%s' %(symbol, name), inplace=True)
+        ret.rename(columns=lambda name: '%s_%s' % (symbol, name), inplace=True)
         return ret
+
 
 class GoogleConnection(DataConnection):
     """
     Utilizes Pandas' Remote Data Access methods to fetch
     symbol data from Google.
     """
+
     def _request(self, url):
         """
         Used for custom request outside of Pandas framework.
         """
         try:
-            return urllib2.urlopen(url)
-        except urllib2.HTTPError, error:
-            print 'Error when connecting to Google servers: %s' %error
-        except IOError, error:
-            print 'Could not connect to Google servers with url %s: %s' %(url, error)
-        except Exception, error: # pylint: disable=broad-except
-            print 'Unknown Error when trying to connect to Google servers: %s' %error
+            return urllib.request.urlopen(url)
+        except urllib.error.HTTPError as e:
+            print('Error when connecting to Google servers:', urllib.error)
+        except IOError as error:
+            print('Could not connect to Google servers with url %s: %s' %
+                  (url, error))
+        except Exception as error:  # pylint: disable=broad-except
+            print(
+                'Unknown Error when trying to connect to Google servers: %s' % error)
 
     def get_data(self, symbol, start, end, symbol_in_column=True):
         """
@@ -72,7 +84,8 @@ class GoogleConnection(DataConnection):
         """
         ret = web.DataReader(str(symbol).upper(), 'google', start, end)
         if symbol_in_column:
-            ret.rename(columns=lambda name: '%s_%s' %(symbol, name), inplace=True)
+            ret.rename(columns=lambda name: '%s_%s' %
+                       (symbol, name), inplace=True)
         return ret
 
     def get_ticks(self, symbol, period='15d', interval=60, symbol_in_column=True):
@@ -83,40 +96,42 @@ class GoogleConnection(DataConnection):
         @type symbol: string
         """
         symbol = str(symbol).upper()
-        data = None # Return data
+        data = None  # Return data
         url = 'http://www.google.com/finance/getprices?i=%s&p=%s&f=d,o,h,l,c,v&q=%s' \
-               %(interval, period, symbol)
+            % (interval, period, symbol)
         page = self._request(url)
-        entries = page.readlines()[7:] # first 7 line is document information
-        days = [] # Keep track of all days
-        day = None # Keep track of current day
-        date = None # Keep track of current time
+        entries = page.readlines()[7:]  # first 7 line is document information
+        days = []  # Keep track of all days
+        day = None  # Keep track of current day
+        date = None  # Keep track of current time
         # sample values:'a1316784600,31.41,31.5,31.4,31.43,150911'
         for entry in entries:
             quote = entry.strip().split(',')
-            if quote[0].startswith('a'): # Datetime
+            if quote[0].startswith('a'):  # Datetime
                 day = datetime.datetime.fromtimestamp(int(quote[0][1:]))
                 days.append(day)
                 date = day
             else:
-                date = day + datetime.timedelta(minutes=int(quote[0])*interval/60)
+                date = day + \
+                    datetime.timedelta(minutes=int(quote[0])*interval/60)
             if symbol_in_column:
-                data_frame = pd.DataFrame({'%s_Open' %symbol: float(quote[4]), \
-                                           '%s_High' %symbol: float(quote[2]), \
-                                           '%s_Low' %symbol: float(quote[3]), \
-                                           '%s_Close' %symbol: float(quote[1]), \
-                                           '%s_Volume' %symbol: int(quote[5])}, \
+                data_frame = pd.DataFrame({'%s_Open' % symbol: float(quote[4]),
+                                           '%s_High' % symbol: float(quote[2]),
+                                           '%s_Low' % symbol: float(quote[3]),
+                                           '%s_Close' % symbol: float(quote[1]),
+                                           '%s_Volume' % symbol: int(quote[5])},
                                           index=[date])
             else:
-                data_frame = pd.DataFrame({'Open': float(quote[4]), \
-                                           'High': float(quote[2]), \
-                                           'Low': float(quote[3]), \
-                                           'Close': float(quote[1]), \
-                                           'Volume': int(quote[5])}, \
+                data_frame = pd.DataFrame({'Open': float(quote[4]),
+                                           'High': float(quote[2]),
+                                           'Low': float(quote[3]),
+                                           'Close': float(quote[1]),
+                                           'Volume': int(quote[5])},
                                           index=[date])
             if data is None:
                 data = data_frame
-            else: data = data.combine_first(data_frame)
+            else:
+                data = data.combine_first(data_frame)
         # Reindex for missing minutes
         new_index = None
         for day in days:
@@ -128,31 +143,36 @@ class GoogleConnection(DataConnection):
         # Front fill for minute data
         return data.reindex(new_index, method='ffill')
 
+
 class OandaConnection(DataConnection):
     """
     Data connection used to gather data from the Oanda forex broker.
     """
+
     def __init__(self, account_id, access_token, environment='practice'):
         DataConnection.__init__(self)
-        import oandapy # pylint: disable=import-error
+        import oandapy  # pylint: disable=import-error
         self.account_id = account_id
         self.environment = environment
-        self.oanda = oandapy.API(environment=environment, access_token=access_token)
+        self.oanda = oandapy.API(
+            environment=environment, access_token=access_token)
+
     def __str__(self):
         return 'OandaConnection(account_id=%s, access_token=******, environment=%s)' \
-                                %(self.account_id, self.environment)
+            % (self.account_id, self.environment)
+
     def __repr__(self):
         return 'OandaConnection(account_id=%s, access_token=******, environment=%s)' \
-                                %(self.account_id, self.environment)
+            % (self.account_id, self.environment)
 
-    def get_data(self, symbol, granularity='H1', periods=5000, \
-                       realtime=False, symbol_in_column=True):
+    def get_data(self, symbol, granularity='H1', periods=5000,
+                 realtime=False, symbol_in_column=True):
         """
         Gets the dataframe containing all of the currency data requested.
         """
         self.logger.info('Getting %s candles of %s data for %s granularity \
-                          (realtime=%s, symbol_in_column=%s)' \
-                          %(periods, symbol, granularity, realtime, symbol_in_column))
+                          (realtime=%s, symbol_in_column=%s)'
+                         % (periods, symbol, granularity, realtime, symbol_in_column))
         candles = self.oanda.get_history(account_id=self.account_id,
                                          instrument=symbol,
                                          granularity=granularity,
@@ -161,27 +181,29 @@ class OandaConnection(DataConnection):
             candles.pop()
         data = None
         for candle in candles:
-            date = datetime.datetime.strptime(candle['time'], "%Y-%m-%dT%H:%M:%S.000000Z")
+            date = datetime.datetime.strptime(
+                candle['time'], "%Y-%m-%dT%H:%M:%S.000000Z")
             if symbol_in_column:
-                data_frame = pd.DataFrame({'%s_Open' %symbol: candle['openBid'], \
-                                           '%s_High' %symbol: candle['highBid'], \
-                                           '%s_Low' %symbol: candle['lowBid'], \
-                                           '%s_Close' %symbol: candle['closeBid'], \
-                                           '%s_Volume' %symbol: candle['volume']}, \
+                data_frame = pd.DataFrame({'%s_Open' % symbol: candle['openBid'],
+                                           '%s_High' % symbol: candle['highBid'],
+                                           '%s_Low' % symbol: candle['lowBid'],
+                                           '%s_Close' % symbol: candle['closeBid'],
+                                           '%s_Volume' % symbol: candle['volume']},
                                           index=[date])
             else:
-                data_frame = pd.DataFrame({'Open' %symbol: candle['openBid'], \
-                                           'High' %symbol: candle['highBid'], \
-                                           'Low' %symbol: candle['lowBid'], \
-                                           'Close' %symbol: candle['closeBid'], \
-                                           'Volume' %symbol: candle['volume']}, \
+                data_frame = pd.DataFrame({'Open' % symbol: candle['openBid'],
+                                           'High' % symbol: candle['highBid'],
+                                           'Low' % symbol: candle['lowBid'],
+                                           'Close' % symbol: candle['closeBid'],
+                                           'Volume' % symbol: candle['volume']},
                                           index=[date])
             if data is None:
                 data = data_frame
             else:
                 data = data.combine_first(data_frame)
-        self.logger.debug('Data: %s' %data)
+        self.logger.debug('Data: %s' % data)
         return data
+
 
 class ForexiteConnection(DataConnection):
     """
@@ -189,6 +211,7 @@ class ForexiteConnection(DataConnection):
     """
     URL = "http://www.forexite.com/free_forex_quotes/%s/%s/%s%s%s.zip"
     #URL = "http://www.forexite.com/free_forex_quotes/YY/MM/DDMMYY.zip"
+
     def get_data(self, start, end):
         """
         Always returns 1min OPEN, HIGH, LOW, CLOSE for all available currency
@@ -200,40 +223,44 @@ class ForexiteConnection(DataConnection):
         while start <= end:
             day = str(start.day)
             if len(day) == 1:
-                day = '0%s' %day
+                day = '0%s' % day
             month = str(start.month)
             if len(month) == 1:
-                month = '0%s' %month
+                month = '0%s' % month
             long_year = str(start.year)
             year = long_year[2:]
-            url = self.URL %(long_year, month, day, month, year)
+            url = self.URL % (long_year, month, day, month, year)
             start = start + datetime.timedelta(1)
             try:
-                page = urllib2.urlopen(url)
-            except urllib2.HTTPError, error:
-                print error
+                page = urllib.request.urlopen(url)
+            except urllib.error.HTTPError as error:
+                print(error)
                 continue
             zipf = zipfile.ZipFile(StringIO(page.read()))
-            series = read_csv(zipf.open('%s%s%s.txt' %(day, month, year)), parse_dates=True)
+            series = read_csv(zipf.open('%s%s%s.txt' %
+                                        (day, month, year)), parse_dates=True)
             for ticker in series['<TICKER>'].unique():
-                data_frame = series.loc[series['<TICKER>'] == ticker]  # pylint: disable=no-member
+                data_frame = series.loc[series['<TICKER>']
+                                        == ticker]  # pylint: disable=no-member
                 first_row = data_frame.iloc[0]
                 start_date = first_row['<DTYYYYMMDD>']
                 start_time = first_row['<TIME>']
-                data_frame.index = pd.date_range(str(start_date) + ' ' + \
-                                   str(start_time).zfill(6), \
-                                   periods=len(data_frame), \
-                                   freq='1Min')
+                data_frame.index = pd.date_range(str(start_date) + ' ' +
+                                                 str(start_time).zfill(6),
+                                                 periods=len(data_frame),
+                                                 freq='1Min')
                 del data_frame['<TICKER>']
                 del data_frame['<DTYYYYMMDD>']
                 del data_frame['<TIME>']
-                rename_columns = lambda name: '%s_%s' %(ticker, name.strip('<>').capitalize()) # pylint: disable=cell-var-from-loop
+                def rename_columns(name): return '%s_%s' % (ticker, name.strip(
+                    '<>').capitalize())  # pylint: disable=cell-var-from-loop
                 data_frame.rename(columns=rename_columns, inplace=True)
                 if ticker in data:
                     data[ticker] = data[ticker].combine_first(data_frame)
                 else:
                     data[ticker] = data_frame
         return data
+
 
 class MySQLConnection(DataConnection):
     """
@@ -243,7 +270,8 @@ class MySQLConnection(DataConnection):
     are pulling from. For example, if you wanted to pull data for the 'msft'
     symbol, you would need a MySQL table named 'MSFT'.
     """
-    def __init__(self, host='localhost', port=3306, database='symbol_data', \
+
+    def __init__(self, host='localhost', port=3306, database='symbol_data',
                  username='root', password=''):
         DataConnection.__init__(self)
         import MySQLdb
@@ -272,43 +300,45 @@ class MySQLConnection(DataConnection):
         """
         if custom_cols is None:
             custom_cols = []
-        query = 'SELECT %s, open, high, low, close' %date_column
+        query = 'SELECT %s, open, high, low, close' % date_column
         if volume:
             query += ', volume'
         for col in custom_cols:
-            query += ', %s' %col
+            query += ', %s' % col
         query += ' FROM %s WHERE %s >= "%s" AND %s <= "%s"'
-        query = query %(symbol,
-                        date_column,
-                        start,
-                        date_column,
-                        end)
+        query = query % (symbol,
+                         date_column,
+                         start,
+                         date_column,
+                         end)
         num_results = self.cursor.execute(query)
         if num_results < 1:
             raise NoDataException()
         results = []
         for result in self.cursor.fetchall():
-            row = {'%s_Date' %symbol: result[0],
-                   '%s_Open' %symbol: result[1],
-                   '%s_High' %symbol: result[2],
-                   '%s_Low' %symbol: result[3],
-                   '%s_Close' %symbol: result[4]}
+            row = {'%s_Date' % symbol: result[0],
+                   '%s_Open' % symbol: result[1],
+                   '%s_High' % symbol: result[2],
+                   '%s_Low' % symbol: result[3],
+                   '%s_Close' % symbol: result[4]}
             index = 4
             if volume:
                 index += 1
-                row['%s_Volume' %symbol] = result[index]
+                row['%s_Volume' % symbol] = result[index]
             for col in custom_cols:
                 index += 1
-                row['%s_%s' %(symbol, col)] = result[index]
+                row['%s_%s' % (symbol, col)] = result[index]
             results.append(row)
         ret = pd.DataFrame.from_dict(results)
-        return ret.set_index('%s_Date' %symbol)
+        return ret.set_index('%s_Date' % symbol)
+
 
 class MongoDatabaseConnection(DataConnection):
     """
     MongoDB connection to retrieve data.
     """
-    def __init__(self, host='127.0.0.1', port=27017, database='symbol-data', \
+
+    def __init__(self, host='127.0.0.1', port=27017, database='symbol-data',
                  username=None, password=None):
         DataConnection.__init__(self)
         from pymongo import MongoClient
@@ -328,23 +358,24 @@ class MongoDatabaseConnection(DataConnection):
         """
         from pymongo import ASCENDING
         symbol = str(symbol).upper()
-        results = self.database[symbol].find({'_id': \
-                              {'$gte': start, '$lte': end}}\
-                              ).sort('datetime', ASCENDING)
+        results = self.database[symbol].find({'_id':
+                                              {'$gte': start, '$lte': end}}
+                                             ).sort('datetime', ASCENDING)
         ret = pd.DataFrame.from_dict(list(results))
         if len(ret) < 1:
             raise NoDataException()
-        ret.rename(columns={'open': 'Open', \
-                            'high': 'High', \
-                            'low': 'Low', \
-                            'close': 'Close', \
-                            'volume': 'Volume', \
-                            'adj_close': 'Adj Close', \
-                            '_id': 'Date'}, \
-                           inplace=True)
+        ret.rename(columns={'open': 'Open',
+                            'high': 'High',
+                            'low': 'Low',
+                            'close': 'Close',
+                            'volume': 'Volume',
+                            'adj_close': 'Adj Close',
+                            '_id': 'Date'},
+                   inplace=True)
         ret = ret.set_index('Date')
         if symbol_in_column:
-            ret.rename(columns=lambda name: '%s_%s' %(symbol, name), inplace=True)
+            ret.rename(columns=lambda name: '%s_%s' %
+                       (symbol, name), inplace=True)
         return ret
 
     def set_data(self, data_frame, symbols, volume=True, adj_close=True):
@@ -358,30 +389,32 @@ class MongoDatabaseConnection(DataConnection):
         for symbol in symbols:
             symbol = str(symbol).upper()
             if adj_close:
-                data = data_frame.loc[:, ['%s_Open' %symbol, \
-                                          '%s_Close' %symbol, \
-                                          '%s_High' %symbol, \
-                                          '%s_Low' %symbol, \
-                                          '%s_Volume' %symbol, \
-                                          '%s_Adj Close' %symbol]]
-                data.columns = ['open', 'close', 'high', 'low', 'volume', 'adj_close']
+                data = data_frame.loc[:, ['%s_Open' % symbol,
+                                          '%s_Close' % symbol,
+                                          '%s_High' % symbol,
+                                          '%s_Low' % symbol,
+                                          '%s_Volume' % symbol,
+                                          '%s_Adj Close' % symbol]]
+                data.columns = ['open', 'close', 'high',
+                                'low', 'volume', 'adj_close']
             elif volume:
-                data = data_frame.loc[:, ['%s_Open' %symbol, \
-                                          '%s_Close' %symbol, \
-                                          '%s_High' %symbol, \
-                                          '%s_Low' %symbol, \
-                                          '%s_Volume' %symbol]]
+                data = data_frame.loc[:, ['%s_Open' % symbol,
+                                          '%s_Close' % symbol,
+                                          '%s_High' % symbol,
+                                          '%s_Low' % symbol,
+                                          '%s_Volume' % symbol]]
                 data.columns = ['open', 'close', 'high', 'low', 'volume']
             else:
-                data = data_frame.loc[:, ['%s_Open' %symbol, \
-                                          '%s_Close' %symbol, \
-                                          '%s_High' %symbol, \
-                                          '%s_Low' %symbol]]
+                data = data_frame.loc[:, ['%s_Open' % symbol,
+                                          '%s_Close' % symbol,
+                                          '%s_High' % symbol,
+                                          '%s_Low' % symbol]]
                 data.columns = ['open', 'close', 'high', 'low']
             for row in data.iterrows():
                 values = dict(row[1])
                 values['_id'] = row[0]
                 self.database[symbol].insert(values)
+
 
 def populate_mongo_day(symbols, start, end, database='symbol-data'):
     """
@@ -395,8 +428,9 @@ def populate_mongo_day(symbols, start, end, database='symbol-data'):
         try:
             data = yahoo.get_data(symbol, start, end)
             mgc.set_data(data, [symbol])
-        except Exception, error: # pylint: disable=broad-except
-            print 'Error for %s (%s - %s): %s' %(symbol, start, end, error)
+        except Exception as error:  # pylint: disable=broad-except
+            print('Error for %s (%s - %s): %s' % (symbol, start, end, error))
+
 
 def populate_mongo_minute(symbols, period='15d', database='symbol-data-1min'):
     """
@@ -409,8 +443,9 @@ def populate_mongo_minute(symbols, period='15d', database='symbol-data-1min'):
         try:
             data = google.get_ticks(symbol, period=period)
             mgc.set_data(data, [symbol], adj_close=False)
-        except Exception, error: # pylint: disable=broad-except
-            print 'Failed %s: %s' %(symbol, error)
+        except Exception as error:  # pylint: disable=broad-except
+            print('Failed %s: %s' % (symbol, error))
+
 
 def populate_currency_minute(start, end, sleep=None, database='symbol-data-1min-currency'):
     """
@@ -429,7 +464,8 @@ def populate_currency_minute(start, end, sleep=None, database='symbol-data-1min-
         if sleep:
             time.sleep(sleep)
 
-def populate_oanda_currency(account_id, access_token, symbols, granularity='M5', \
+
+def populate_oanda_currency(account_id, access_token, symbols, granularity='M5',
                             periods=5000, database='symbol-data-5min-currency'):
     """
     Helper function to populate a local mongo db with currency minute data.
@@ -440,6 +476,7 @@ def populate_oanda_currency(account_id, access_token, symbols, granularity='M5',
     for symbol in symbols:
         data = oanda.get_data(symbol, granularity=granularity, periods=periods)
         mgc.set_data(data, [symbol], adj_close=False)
+
 
 def convert_1min_to_5min(db_name_1min, db_name_5min, symbols, start, end, volume=False):
     """
@@ -454,7 +491,9 @@ def convert_1min_to_5min(db_name_1min, db_name_5min, symbols, start, end, volume
     dataset = nowtrade.dataset.Dataset(symbols, mgc_old, start, end)
     dataset.load_data()
     dataset.resample('5Min', volume=volume)
-    mgc_new.set_data(dataset.data_frame, symbols, volume=volume, adj_close=False)
+    mgc_new.set_data(dataset.data_frame, symbols,
+                     volume=volume, adj_close=False)
+
 
 def convert_5min_to_15min(db_name_5min, db_name_15min, symbols, start, end, volume=False):
     """
@@ -469,4 +508,5 @@ def convert_5min_to_15min(db_name_5min, db_name_15min, symbols, start, end, volu
     dataset = nowtrade.dataset.Dataset(symbols, mgc_old, start, end)
     dataset.load_data()
     dataset.resample('15Min', volume=volume)
-    mgc_new.set_data(dataset.data_frame, symbols, volume=volume, adj_close=False)
+    mgc_new.set_data(dataset.data_frame, symbols,
+                     volume=volume, adj_close=False)
